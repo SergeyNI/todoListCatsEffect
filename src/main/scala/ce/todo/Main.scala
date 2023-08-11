@@ -8,6 +8,8 @@ import cats.implicits.*
 import cats.implicits
 import cats.instances.string
 
+def printColorLine(str:String,color: String):IO[Unit] = IO(println(color+str))
+def printColor(str:String,color: String):IO[Unit] = IO(print(color+str))
 object Main extends IOApp {
 
   // This is your new "main"!
@@ -20,7 +22,7 @@ object Main extends IOApp {
   }
   def commander(b:Board):IO[ExitCode] ={
     for{
-      _<-IO(println("enter your command"))
+      _<-printColorLine("enter your command",Console.WHITE)*>printColor(">",Console.WHITE)
       str<-IO.readLine
       commandParts<-parse(str)
       _<-IO.println(commandParts)
@@ -29,36 +31,45 @@ object Main extends IOApp {
       _<-commander(b)
     } yield ExitCode.Success
   }
+  
 
-  val input:IO[String] =  IO.readLine
-  
-  def parse1(s:String):IO[Unit] = IO(println(s"entered string is $s"))
-  
   def parse(s:String):IO[List[String]] = s.split(" ").toList.pure[IO]
   
   def executeCommand(b:Board,commandParts:List[String]):IO[Unit]=
     given board:Board = b
     
-    def getCommandParameter(commandParts:List[String]):Option[(String,String)]=
+    def getCommandParameter(commandParts:List[String]):Option[Either[String,(String,String)]]=
       commandParts match
-        case command :: parameter :: Nil => Some((command,parameter))
-        case command :: Nil => Some((command,""))
-
+        case command :: parameter :: Nil => Some(Right((command,parameter)))
+        case command :: Nil => Some(Left(command))
         case _ => None
     
-    def getFunction(command:String):Option[Function1[String,IO[Unit]]] =
+    def getFunctionWithParam(command:String):Option[Function1[String,IO[Unit]]] =
       command match
         case "sl" => Some(selectList)
         case "st" => Some(selectTask)
         case _=> None
     
+    def getFunctionWithoutParams(command:String): Option[IO[Unit]] =
+      command match {
+        case "show" => Some(BoardViewer(b).showBoard)
+        case _=> None
+      }
+    
     
     getCommandParameter(commandParts) match
         case None => IO(())
-        case Some((command,parameter)) =>
-          getFunction(command) match
-            case None => IO(())
-            case Some(f) => f(parameter)*>IO(println(s"comm $command param $parameter"))  
+        case Some(commandType) =>
+          commandType match {
+            case Right((command,parameter)) => getFunctionWithParam(command) match
+              case None => IO(println(s"not found command '$command' with parameter"))
+              case Some(f) => f(parameter)
+            case Left(command) => getFunctionWithoutParams(command) match
+              case None => IO(println(s"Not found command '$command'"))
+              case Some(f) => f 
+            
+          }
+            
 
   
   def init() = 
