@@ -7,7 +7,12 @@ case class Board(name:String,var taskLists:List[TaskList] = Nil, var currentTask
   def getCurrentTaskList():Option[TaskList] = currentTaskList
   
   def getLists() = taskLists
-  def isCurrent(list:TaskList) = currentTaskList.get == list
+  def isCurrent(list:TaskList) = 
+    currentTaskList match
+      case None => false
+      case Some(value) =>value == list
+    
+    // currentTaskList.get == list
   
   def add(list:TaskList) =
     taskLists = list ::taskLists
