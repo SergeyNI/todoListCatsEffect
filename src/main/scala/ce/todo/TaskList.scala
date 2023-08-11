@@ -21,7 +21,12 @@ case class TaskList(name:String):
         result
       case None => currentTask = None;true
   
-  def isCurrent(task:Task):Boolean = currentTask.get == task
+  def isCurrent(task:Task):Boolean = 
+    currentTask match
+      case None => false
+      case Some(value) => value == task
+    
+    currentTask.get == task
   
   def add(task:Task) = 
     tasks = tasks:+task
